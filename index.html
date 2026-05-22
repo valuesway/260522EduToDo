@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>에듀투두 (EduTodo) - 교육자를 위한 스마트 할 일 관리 시스템</title>
+  
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="바쁜 교사, 강사, 교수 등 교육자분들을 위한 스마트 할 일 관리 시스템. 수업 준비, 평가 채점, 행정 업무, 학생 상담을 한 곳에서 체계적으로 관리하세요.">
+  <meta name="keywords" content="에듀투두, EduTodo, 교사 투두리스트, 교사 할일관리, 교육자 생산성, 시간표 관리, 학생 상담 노트, Netlify 배포">
+  <meta name="author" content="EduTodo Team">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎓</text></svg>">
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="에듀투두 (EduTodo) - 교육자를 위한 스마트 할 일 관리 시스템">
+  <meta property="og:description" content="수업 준비부터 학생 관리까지, 교육자를 위한 맞춤형 스마트 플래너.">
+  
+  <!-- Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/feather-icons"></script>
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="light-theme">
+  <!-- Confetti Canvas for Task Completion Visual Effect -->
+  <canvas id="confetti-canvas"></canvas>
+
+  <div class="app-container">
+    <!-- Header -->
+    <header class="main-header">
+      <div class="header-logo-section">
+        <div class="logo-icon">🎓</div>
+        <div class="logo-text">
+          <h1>EduTodo</h1>
+          <span class="sub-text">스마트 교무 수첩</span>
+        </div>
+      </div>
+      
+      <div class="header-datetime-section">
+        <div class="live-clock">
+          <i data-feather="calendar" class="clock-icon"></i>
+          <span id="current-date">2026년 05월 22일 (금)</span>
+          <span id="current-time" class="time-highlight">15:47:25</span>
+        </div>
+      </div>
+      
+      <div class="header-controls">
+        <!-- Search Bar -->
+        <div class="search-box">
+          <i data-feather="search" class="search-icon"></i>
+          <input type="text" id="task-search" placeholder="할 일 또는 학생 검색...">
+        </div>
+        
+        <!-- Action Buttons -->
+        <button id="theme-toggle-btn" class="icon-btn" title="테마 변경">
+          <i data-feather="moon" class="theme-icon-dark"></i>
+          <i data-feather="sun" class="theme-icon-light" style="display: none;"></i>
+        </button>
+        
+        <button id="export-btn" class="icon-btn" title="백업 내보내기">
+          <i data-feather="download"></i>
+        </button>
+        
+        <button id="import-btn" class="icon-btn" title="백업 가져오기">
+          <i data-feather="upload"></i>
+        </button>
+        <input type="file" id="import-file" accept=".json" style="display: none;">
+      </div>
+    </header>
+
+    <div class="dashboard-layout">
+      <!-- Sidebar / Left Panel -->
+      <aside class="sidebar-panel">
+        <!-- Welcome Card -->
+        <div class="teacher-profile-card">
+          <div class="avatar">👨‍🏫</div>
+          <div class="profile-info">
+            <span class="welcome-label">오늘도 파이팅!</span>
+            <h3 class="teacher-name">선생님</h3>
+          </div>
+        </div>
+
+        <!-- Class/Subject Filters -->
+        <section class="sidebar-section">
+          <div class="section-header">
+            <h4><i data-feather="tag" class="section-icon"></i> 학급 및 분류</h4>
+            <button id="add-category-btn" class="text-action-btn" title="분류 추가">+ 추가</button>
+          </div>
+          <div class="category-list" id="category-filter-list">
+            <!-- Dynamically Rendered Categories -->
+            <button class="category-chip active" data-category="all">
+              <span class="dot" style="background-color: var(--primary);"></span>
+              <span class="category-name">전체보기</span>
+              <span class="count" id="count-all">0</span>
+            </button>
+            <button class="category-chip" data-category="행정업무">
+              <span class="dot" style="background-color: var(--violet);"></span>
+              <span class="category-name">행정업무</span>
+              <span class="count" id="count-행정">0</span>
+            </button>
+            <button class="category-chip" data-category="수업준비">
+              <span class="dot" style="background-color: var(--emerald);"></span>
+              <span class="category-name">수업준비</span>
+              <span class="count" id="count-수업">0</span>
+            </button>
+            <button class="category-chip" data-category="학생상담">
+              <span class="dot" style="background-color: var(--amber);"></span>
+              <span class="category-name">학생상담</span>
+              <span class="count" id="count-상담">0</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- Today's Timetable Widget -->
+        <section class="sidebar-section">
+          <div class="section-header">
+            <h4><i data-feather="clock" class="section-icon"></i> 오늘의 시간표</h4>
+            <button id="edit-timetable-btn" class="text-action-btn" title="시간표 편집">
+              <i data-feather="edit-3" style="width: 14px; height: 14px;"></i> 편집
+            </button>
+          </div>
+          <div class="timetable-widget">
+            <div class="timetable-list" id="timetable-slots">
+              <!-- Dynamically populated or static periods with interactive edit fields -->
+              <div class="timetable-period" data-period="1">
+                <span class="period-num">1</span>
+                <div class="period-details">
+                  <span class="period-subject" data-placeholder="1교시 수업 입력">수학</span>
+                  <span class="period-memo" data-placeholder="준비물/과제 메모">45p 형성평가 평가지 준비</span>
+                </div>
+              </div>
+              <div class="timetable-period" data-period="2">
+                <span class="period-num">2</span>
+                <div class="period-details">
+                  <span class="period-subject" data-placeholder="2교시 수업 입력">국어</span>
+                  <span class="period-memo" data-placeholder="준비물/과제 메모">PPT 2단원 준비</span>
+                </div>
+              </div>
+              <div class="timetable-period" data-period="3">
+                <span class="period-num">3</span>
+                <div class="period-details">
+                  <span class="period-subject" data-placeholder="3교시 수업 입력">과학</span>
+                  <span class="period-memo" data-placeholder="준비물/과제 메모">과학실 실험 기구 확인</span>
+                </div>
+              </div>
+              <div class="timetable-period" data-period="4">
+                <span class="period-num">4</span>
+                <div class="period-details">
+                  <span class="period-subject" data-placeholder="4교시 수업 입력">행정실무</span>
+                  <span class="period-memo" data-placeholder="준비물/과제 메모">기안 결재 문서 확인</span>
+                </div>
+              </div>
+              <div class="timetable-period" data-period="5">
+                <span class="period-num">5</span>
+                <div class="period-details">
+                  <span class="period-subject" data-placeholder="5교시 수업 입력">창체</span>
+                  <span class="period-memo" data-placeholder="준비물/과제 메모">안전 교육 영상 시청</span>
+                </div>
+              </div>
+              <div class="timetable-period" data-period="6">
+                <span class="period-num">6</span>
+                <div class="period-details">
+                  <span class="period-subject" data-placeholder="6교시 수업 입력">동아리</span>
+                  <span class="period-memo" data-placeholder="준비물/과제 메모">동아리 일지 작성</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </aside>
+
+      <!-- Main Dashboard Panel -->
+      <main class="main-content-panel">
+        <!-- Stats Section -->
+        <section class="stats-dashboard">
+          <div class="stat-card progress-card">
+            <div class="stat-icon-wrapper progress-icon">
+              <i data-feather="trending-up"></i>
+            </div>
+            <div class="stat-info">
+              <span class="stat-label">오늘의 달성률</span>
+              <div class="progress-bar-container">
+                <div class="progress-bar" id="overall-progress-bar" style="width: 0%;"></div>
+              </div>
+              <span class="stat-value" id="overall-progress-text">0%</span>
+            </div>
+          </div>
+          
+          <div class="stat-card">
+            <div class="stat-icon-wrapper completed-icon">
+              <i data-feather="check-square"></i>
+            </div>
+            <div class="stat-info">
+              <span class="stat-label">완료한 일</span>
+              <span class="stat-value" id="stat-completed-count">0<span class="unit">건</span></span>
+            </div>
+          </div>
+
+          <div class="stat-card warning-card">
+            <div class="stat-icon-wrapper pending-icon">
+              <i data-feather="alert-circle"></i>
+            </div>
+            <div class="stat-info">
+              <span class="stat-label">마감 임박 (D-3 이내)</span>
+              <span class="stat-value" id="stat-urgent-count">0<span class="unit">건</span></span>
+            </div>
+          </div>
+
+          <div class="stat-card total-card">
+            <div class="stat-icon-wrapper total-icon">
+              <i data-feather="list"></i>
+            </div>
+            <div class="stat-info">
+              <span class="stat-label">남은 총 업무</span>
+              <span class="stat-value" id="stat-pending-count">0<span class="unit">건</span></span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Task Creator & Filters -->
+        <section class="task-creator-section glass-panel">
+          <h3 class="panel-title"><i data-feather="plus-circle" class="panel-icon"></i> 할 일 계획하기</h3>
+          
+          <form id="new-task-form" class="task-form">
+            <div class="form-row-main">
+              <input type="text" id="task-title-input" placeholder="새로운 할 일을 입력하세요... (예: 2학년 기말고사 시험 출제)" required autocomplete="off">
+              <button type="submit" class="submit-task-btn">
+                <i data-feather="plus"></i> <span>업무 추가</span>
+              </button>
+            </div>
+            
+            <div class="form-row-details">
+              <div class="input-group">
+                <label for="task-category-select"><i data-feather="folder"></i> 분류</label>
+                <select id="task-category-select">
+                  <option value="수업준비">수업준비</option>
+                  <option value="행정업무">행정업무</option>
+                  <option value="학생상담">학생상담</option>
+                </select>
+              </div>
+
+              <div class="input-group">
+                <label for="task-priority-select"><i data-feather="flag"></i> 우선순위</label>
+                <select id="task-priority-select">
+                  <option value="low">낮음</option>
+                  <option value="medium" selected>중간</option>
+                  <option value="high">높음 🔥</option>
+                </select>
+              </div>
+
+              <div class="input-group">
+                <label for="task-date-input"><i data-feather="calendar"></i> 마감 기한</label>
+                <input type="date" id="task-date-input">
+              </div>
+            </div>
+          </form>
+
+          <!-- Quick Templates for Teachers -->
+          <div class="quick-templates">
+            <span class="template-label"><i data-feather="zap" class="template-icon"></i> 교사 추천 템플릿:</span>
+            <div class="template-tags">
+              <button class="template-tag" data-title="수업용 PPT 및 유인물 제작" data-category="수업준비" data-priority="medium">💻 수업 PPT/유인물</button>
+              <button class="template-tag" data-title="학기말 나이스 생기부 행동특성 입력" data-category="행정업무" data-priority="high">📝 생기부 입력</button>
+              <button class="template-tag" data-title="지필 평가 시험 문제 출제 및 검토" data-category="수업준비" data-priority="high">✏️ 시험 출제</button>
+              <button class="template-tag" data-title="진로 상담 기록 및 상담 일지 작성" data-category="학생상담" data-priority="medium">🤝 진로 상담 일지</button>
+              <button class="template-tag" data-title="행정 공문 기안 작성 및 결재 상신" data-category="행정업무" data-priority="low">📎 공문 상신</button>
+              <button class="template-tag" data-title="다음 주 주간 학습안내 수립 및 배포" data-category="수업준비" data-priority="medium">📅 주간 학습 수립</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Tasks Display Container -->
+        <section class="task-list-section">
+          <div class="task-list-header">
+            <h3 class="panel-title">
+              <i data-feather="align-left" class="panel-icon"></i> 할 일 리스트
+              <span id="current-filter-badge" class="filter-badge">전체보기</span>
+            </h3>
+            
+            <div class="task-sorting-controls">
+              <label for="task-sort-select">정렬 방식:</label>
+              <select id="task-sort-select" class="styled-select">
+                <option value="created-desc">최신 등록순</option>
+                <option value="date-asc">마감일 빠른순</option>
+                <option value="priority-desc">우선순위 높은순</option>
+                <option value="alphabetical">가나다순</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="task-tabs">
+            <button class="tab-btn active" data-tab="active">진행 중인 업무 <span id="active-tasks-count" class="tab-badge">0</span></button>
+            <button class="tab-btn" data-tab="completed">완료된 업무 <span id="completed-tasks-count" class="tab-badge">0</span></button>
+          </div>
+
+          <div class="tasks-container" id="tasks-list">
+            <!-- Dynamically Rendered Task Cards -->
+            <div class="empty-state">
+              <div class="empty-illustration">🗂️</div>
+              <p class="empty-text">등록된 할 일이 없습니다.<br>오늘의 새로운 업무를 계획하고 추가해 보세요!</p>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <!-- Right Panel (Student Quick Notes) -->
+      <aside class="right-panel">
+        <section class="student-notes-section">
+          <div class="section-header">
+            <h4><i data-feather="users" class="section-icon"></i> 학생 상담 & 관찰 일지</h4>
+            <button id="add-student-note-btn" class="text-action-btn" title="메모 추가">+ 추가</button>
+          </div>
+
+          <!-- Add Note Form (Collapsible) -->
+          <div id="student-note-form-container" class="student-note-form-container hidden">
+            <form id="student-note-form" class="student-note-form">
+              <input type="text" id="student-name-input" placeholder="학생 이름 (예: 홍길동)" required autocomplete="off">
+              <textarea id="student-memo-input" placeholder="관찰 특이사항 및 상담 메모를 자유롭게 입력하세요..." required></textarea>
+              <div class="form-actions">
+                <button type="button" id="cancel-note-btn" class="btn btn-secondary">취소</button>
+                <button type="submit" class="btn btn-primary">저장</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Note Cards Container -->
+          <div class="student-notes-list" id="student-notes-container">
+            <!-- Dynamically Rendered Note Cards -->
+            <div class="empty-note-state">
+              <div class="empty-illustration">🗒️</div>
+              <p class="empty-text">저장된 상담 메모가 없습니다.<br>상담 일정이나 관찰 특이사항이 있는 학생을 기록해 보세요.</p>
+            </div>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </div>
+
+  <!-- Custom Dialog Modals -->
+  <!-- 1. Add Category Modal -->
+  <div id="category-modal" class="modal-overlay hidden">
+    <div class="modal-content glass-panel">
+      <h3 class="modal-title">🏷️ 새로운 학급/분류 추가</h3>
+      <div class="modal-body">
+        <p class="modal-description">할 일을 체계적으로 묶을 과목이나 학급을 새로 지정하세요.</p>
+        <div class="form-group">
+          <label for="new-category-name">분류 이름</label>
+          <input type="text" id="new-category-name" placeholder="예: 3학년 2반, 정보교과, 업무지원" maxlength="15" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label>테마 컬러 선택</label>
+          <div class="color-picker-grid">
+            <button class="color-swatch active" data-color="blue" style="background-color: var(--blue);"></button>
+            <button class="color-swatch" data-color="emerald" style="background-color: var(--emerald);"></button>
+            <button class="color-swatch" data-color="violet" style="background-color: var(--violet);"></button>
+            <button class="color-swatch" data-color="amber" style="background-color: var(--amber);"></button>
+            <button class="color-swatch" data-color="rose" style="background-color: var(--rose);"></button>
+            <button class="color-swatch" data-color="cyan" style="background-color: var(--cyan);"></button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="close-category-modal" class="btn btn-secondary">취소</button>
+        <button id="save-category-btn" class="btn btn-primary">추가하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Edit Timetable Modal -->
+  <div id="timetable-modal" class="modal-overlay hidden">
+    <div class="modal-content modal-large glass-panel">
+      <h3 class="modal-title">📅 오늘의 시간표 편성과 메모</h3>
+      <div class="modal-body">
+        <p class="modal-description">오늘 진행하는 교시별 수업 이름과 핵심 준비물/메모를 편집하세요. (미입력 교시는 빈칸으로 표시됩니다.)</p>
+        <div class="timetable-edit-grid" id="timetable-edit-form-slots">
+          <!-- Populated dynamically via JS -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="close-timetable-modal" class="btn btn-secondary">닫기</button>
+        <button id="save-timetable-btn" class="btn btn-primary">변경사항 저장</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Script Files -->
+  <script src="app.js"></script>
+</body>
+</html>
